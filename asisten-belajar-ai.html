@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Asisten Belajar AI</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&family=Courier+Prime:wght@400;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#e9ede7;
+    --bg-card:#f4f6f0;
+    --ink:#1e2a38;
+    --ink-soft:#4a5568;
+    --accent:#2b6cb0;
+    --accent-soft:#a9c4da;
+    --margin:#b33a32;
+    --rule:#c3cdd6;
+    --shadow: rgba(30,42,56,0.12);
+    --danger:#b33a32;
+    --ok:#2f7a4f;
+  }
+  [data-theme="dark"]{
+    --bg:#182620;
+    --bg-card:#1f3128;
+    --ink:#f2efe4;
+    --ink-soft:#c6d3c8;
+    --accent:#e8c547;
+    --accent-soft:#5f7a68;
+    --margin:#e8c547;
+    --rule:#375043;
+    --shadow: rgba(0,0,0,0.4);
+    --danger:#e2857a;
+    --ok:#8fd19e;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--ink);
+    font-family:'Source Serif 4', serif;
+    transition:background .3s ease, color .3s ease;
+    min-height:100vh;
+  }
+  .display{font-family:'Caveat',cursive;}
+  .mono{font-family:'Courier Prime', monospace;}
+
+  .app{display:flex; min-height:100vh;}
+
+  /* Sidebar */
+  .sidebar{
+    width:230px;
+    flex-shrink:0;
+    background:var(--bg-card);
+    border-right:3px solid var(--margin);
+    padding:24px 0;
+    display:flex;
+    flex-direction:column;
+    justify-content:space-between;
+  }
+  .brand{padding:0 20px 20px 20px; border-bottom:1px dashed var(--rule);}
+  .brand h1{font-family:'Caveat',cursive; font-size:30px; margin:0; line-height:1;}
+  .brand p{margin:4px 0 0 0; font-size:12px; color:var(--ink-soft); font-family:'Courier Prime',monospace;}
+
+  nav{margin-top:16px; flex:1;}
+  .nav-item{
+    display:flex; align-items:center; gap:10px;
+    padding:12px 20px;
+    cursor:pointer;
+    font-size:15px;
+    color:var(--ink-soft);
+    border-left:3px solid transparent;
+    transition:all .15s ease;
+  }
+  .nav-item:hover{color:var(--ink); background:var(--accent-soft); opacity:0.9;}
+  .nav-item.active{color:var(--ink); border-left:3px solid var(--margin); background:var(--accent-soft); font-weight:600;}
+  .nav-item .icon{font-size:18px;}
+
+  .sidebar-footer{padding:16px 20px 0 20px; border-top:1px dashed var(--rule);}
+  .theme-toggle{
+    display:flex; align-items:center; justify-content:space-between;
+    font-size:13px; font-family:'Courier Prime',monospace; color:var(--ink-soft);
+  }
+  .switch{
+    width:42px; height:22px; border-radius:11px; background:var(--rule);
+    position:relative; cursor:pointer; border:none; flex-shrink:0;
+  }
+  .switch::after{
+    content:''; position:absolute; top:2px; left:2px; width:18px; height:18px;
+    border-radius:50%; background:var(--bg-card); transition:left .2s ease;
+    box-shadow:0 1px 2px var(--shadow);
+  }
+  [data-theme="dark"] .switch::after{left:22px; background:var(--accent);}
+  [data-theme="dark"] .switch{background:var(--accent-soft);}
+
+  /* Main */
+  main{flex:1; padding:32px 40px; max-width:920px; margin:0 auto; width:100%;}
+  .page-title{font-family:'Caveat',cursive; font-size:34px; margin:0 0 4px 0; color:var(--ink);}
+  .page-sub{color:var(--ink-soft); font-size:14px; margin:0 0 24px 0;}
+
+  .card{
+    background:var(--bg-card);
+    border-radius:6px;
+    padding:22px;
+    box-shadow:0 2px 10px var(--shadow);
+    margin-bottom:18px;
+    border-left:4px solid var(--accent-soft);
+  }
+
+  textarea, input[type=text]{
+    width:100%; font-family:'Source Serif 4', serif; font-size:15px;
+    background:transparent; color:var(--ink);
+    border:none; border-bottom:1px solid var(--rule);
+    padding:8px 2px; resize:vertical; outline:none;
+  }
+  textarea:focus, input[type=text]:focus{border-bottom:1px solid var(--accent);}
+
+  button{
+    font-family:'Courier Prime',monospace; font-size:13px; letter-spacing:0.5px;
+    background:var(--ink); color:var(--bg);
+    border:none; padding:10px 18px; border-radius:4px; cursor:pointer;
+    text-transform:uppercase;
+  }
+  [data-theme="dark"] button{background:var(--accent); color:#182620;}
+  button:hover{opacity:0.85;}
+  button:disabled{opacity:0.5; cursor:not-allowed;}
+  button.ghost{background:transparent; color:var(--ink); border:1px solid var(--rule);}
+  .row{display:flex; gap:10px; flex-wrap:wrap; align-items:center;}
+
+  .drop{
+    border:2px dashed var(--rule); border-radius:6px; padding:30px;
+    text-align:center; color:var(--ink-soft); cursor:pointer; font-size:14px;
+  }
+  .drop:hover{border-color:var(--accent);}
+
+  /* Chat */
+  .chat-window{display:flex; flex-direction:column; height:60vh;}
+  .messages{flex:1; overflow-y:auto; padding:8px 4px; display:flex; flex-direction:column; gap:12px;}
+  .msg{max-width:80%; padding:10px 14px; border-radius:10px; font-size:15px; line-height:1.5; white-space:pre-wrap;}
+  .msg.user{align-self:flex-end; background:var(--accent); color:#fff;}
+  [data-theme="dark"] .msg.user{color:#182620;}
+  .msg.ai{align-self:flex-start; background:var(--bg); border:1px solid var(--rule);}
+  .chat-input{display:flex; gap:8px; margin-top:12px; border-top:1px dashed var(--rule); padding-top:12px;}
+  .chat-input textarea{flex:1; border:1px solid var(--rule); border-radius:6px; padding:10px;}
+
+  .empty{color:var(--ink-soft); font-style:italic; font-size:14px; padding:20px 0;}
+
+  .result-block{white-space:pre-wrap; line-height:1.7; font-size:15px;}
+  .result-block ul{padding-left:20px;}
+
+  .history-item{
+    padding:12px 14px; border-bottom:1px dashed var(--rule); cursor:pointer;
+    display:flex; justify-content:space-between; align-items:center;
+  }
+  .history-item:hover{background:var(--accent-soft);}
+  .history-item .t{font-size:14px;}
+  .history-item .d{font-size:11px; color:var(--ink-soft); font-family:'Courier Prime',monospace;}
+
+  .quiz-card{
+    border:1px solid var(--rule); border-radius:6px; padding:16px; margin-bottom:14px;
+  }
+  .quiz-q{font-weight:600; margin-bottom:10px;}
+  .quiz-opt{
+    display:block; width:100%; text-align:left; background:transparent;
+    color:var(--ink); border:1px solid var(--rule); text-transform:none;
+    margin-bottom:6px; padding:8px 12px; font-family:'Source Serif 4',serif; font-size:14px;
+  }
+  .quiz-opt.correct{border-color:var(--ok); background:rgba(47,122,79,0.12); font-weight:600;}
+  .quiz-opt.wrong{border-color:var(--danger); background:rgba(179,58,50,0.12);}
+  .quiz-explain{font-size:13px; color:var(--ink-soft); margin-top:8px; display:none;}
+
+  .loading{display:flex; align-items:center; gap:8px; color:var(--ink-soft); font-size:14px; font-family:'Courier Prime',monospace;}
+  .dot{width:6px; height:6px; border-radius:50%; background:var(--accent); animation:blink 1.2s infinite;}
+  .dot:nth-child(2){animation-delay:.2s;} .dot:nth-child(3){animation-delay:.4s;}
+  @keyframes blink{0%,80%,100%{opacity:0.2;} 40%{opacity:1;}}
+
+  select{
+    font-family:'Courier Prime',monospace; background:var(--bg); color:var(--ink);
+    border:1px solid var(--rule); padding:8px; border-radius:4px;
+  }
+
+  @media (max-width:720px){
+    .app{flex-direction:column;}
+    .sidebar{width:100%; flex-direction:row; overflow-x:auto; padding:10px; border-right:none; border-bottom:3px solid var(--margin);}
+    .brand, .sidebar-footer{display:none;}
+    nav{display:flex; margin-top:0;}
+    .nav-item{border-left:none; border-bottom:3px solid transparent; white-space:nowrap;}
+    .nav-item.active{border-left:none; border-bottom:3px solid var(--margin);}
+    main{padding:20px;}
+  }
+</style>
+</head>
+<body data-theme="light">
+<div class="app">
+  <div class="sidebar">
+    <div>
+      <div class="brand">
+        <h1>Asisten Belajar AI</h1>
+        <p>// teman belajarmu</p>
+      </div>
+      <nav id="nav">
+        <div class="nav-item active" data-section="chat"><span class="icon">💬</span>Chat AI</div>
+        <div class="nav-item" data-section="pdf"><span class="icon">📄</span>Upload PDF</div>
+        <div class="nav-item" data-section="image"><span class="icon">🖼️</span>Upload Gambar Soal</div>
+        <div class="nav-item" data-section="summary"><span class="icon">📝</span>Ringkasan Materi</div>
+        <div class="nav-item" data-section="quiz"><span class="icon">❓</span>Generator Soal</div>
+        <div class="nav-item" data-section="history"><span class="icon">🕘</span>Riwayat Chat</div>
+      </nav>
+    </div>
+    <div class="sidebar-footer">
+      <div class="theme-toggle">
+        <span id="theme-label">Mode Terang</span>
+        <button class="switch" id="theme-switch" onclick="toggleTheme()"></button>
+      </div>
+    </div>
+  </div>
+
+  <main id="main"></main>
+</div>
+
+<script>
+const MODEL = "claude-sonnet-4-6";
+
+// ---------- Theme ----------
+function toggleTheme(){
+  const body = document.body;
+  const dark = body.getAttribute('data-theme') === 'dark';
+  body.setAttribute('data-theme', dark ? 'light' : 'dark');
+  document.getElementById('theme-label').textContent = dark ? 'Mode Terang' : 'Mode Gelap';
+}
+
+// ---------- Navigation ----------
+let currentSection = 'chat';
+document.getElementById('nav').addEventListener('click', (e)=>{
+  const item = e.target.closest('.nav-item');
+  if(!item) return;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  item.classList.add('active');
+  currentSection = item.dataset.section;
+  render();
+});
+
+function render(){
+  const main = document.getElementById('main');
+  if(currentSection === 'chat') return renderChatSection(main);
+  if(currentSection === 'pdf') return renderPdfSection(main);
+  if(currentSection === 'image') return renderImageSection(main);
+  if(currentSection === 'summary') return renderSummarySection(main);
+  if(currentSection === 'quiz') return renderQuizSection(main);
+  if(currentSection === 'history') return renderHistorySection(main);
+}
+
+// ---------- Claude API helper ----------
+async function callClaude(content, {system=null, maxTokens=1000} = {}){
+  const body = {
+    model: MODEL,
+    max_tokens: maxTokens,
+    messages: [{ role: "user", content }]
+  };
+  if(system) body.system = system;
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if(data.error) throw new Error(data.error.message || "Terjadi kesalahan pada AI");
+  return data.content.map(b => b.type === 'text' ? b.text : '').join('\n').trim();
+}
+
+function fileToBase64(file){
+  return new Promise((resolve, reject)=>{
+    const r = new FileReader();
+    r.onload = ()=> resolve(r.result.split(',')[1]);
+    r.onerror = ()=> reject(new Error('Gagal membaca file'));
+    r.readAsDataURL(file);
+  });
+}
+
+function loadingHtml(msgs){
+  return `<div class="loading"><span class="dot"></span><span class="dot"></span><span class="dot"></span> ${msgs}</div>`;
+}
+
+// ---------- Export helpers ----------
+function exportTxt(text, filename){
+  const blob = new Blob([text], {type:'text/plain'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = filename + '.txt';
+  a.click();
+}
+function exportPdf(text, filename){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF();
+  const lines = doc.splitTextToSize(text, 180);
+  doc.setFont('helvetica'); doc.setFontSize(11);
+  let y = 15;
+  lines.forEach(line=>{
+    if(y > 285){ doc.addPage(); y = 15; }
+    doc.text(line, 15, y);
+    y += 6;
+  });
+  doc.save(filename + '.pdf');
+}
+function exportControls(getText, filename){
+  const wrap = document.createElement('div');
+  wrap.className = 'row';
+  wrap.style.marginTop = '14px';
+  wrap.innerHTML = `<button class="ghost" id="exp-txt">Export TXT</button><button class="ghost" id="exp-pdf">Export PDF</button>`;
+  wrap.querySelector('#exp-txt').onclick = ()=> exportTxt(getText(), filename);
+  wrap.querySelector('#exp-pdf').onclick = ()=> exportPdf(getText(), filename);
+  return wrap;
+}
+
+// ---------- Storage (persistent, not localStorage) ----------
+async function saveHistory(title, text, kind){
+  const id = 'hist:' + Date.now();
+  const entry = { title, text, kind, date: new Date().toLocaleString('id-ID') };
+  try{ await window.storage.set(id, JSON.stringify(entry), false); }catch(e){ console.error(e); }
+}
+async function listHistory(){
+  try{
+    const res = await window.storage.list('hist:', false);
+    if(!res || !res.keys) return [];
+    const items = [];
+    for(const k of res.keys){
+      try{
+        const r = await window.storage.get(k, false);
+        if(r) items.push({ key: k, ...JSON.parse(r.value) });
+      }catch(e){}
+    }
+    return items.sort((a,b)=> b.key.localeCompare(a.key));
+  }catch(e){ return []; }
+}
+
+// ================= CHAT =================
+let chatMessages = []; // {role, content}
+function renderChatSection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Chat AI</h2>
+    <p class="page-sub">Tanya apa saja, AI langsung menjawab.</p>
+    <div class="card chat-window">
+      <div class="messages" id="chat-messages"></div>
+      <div class="chat-input">
+        <textarea id="chat-input" rows="2" placeholder="Ketik pertanyaanmu..."></textarea>
+        <button id="chat-send">Kirim</button>
+      </div>
+    </div>
+    <div class="row">
+      <button class="ghost" id="chat-new">+ Percakapan Baru</button>
+    </div>
+  `;
+  renderChatMessages();
+  document.getElementById('chat-send').onclick = sendChatMessage;
+  document.getElementById('chat-new').onclick = ()=>{ chatMessages = []; renderChatMessages(); };
+  document.getElementById('chat-input').addEventListener('keydown', (e)=>{
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChatMessage(); }
+  });
+}
+function renderChatMessages(){
+  const box = document.getElementById('chat-messages');
+  if(!box) return;
+  if(chatMessages.length === 0){
+    box.innerHTML = `<div class="empty">Belum ada percakapan. Mulai tanya sesuatu!</div>`;
+    return;
+  }
+  box.innerHTML = chatMessages.map(m => `<div class="msg ${m.role === 'user' ? 'user':'ai'}">${escapeHtml(m.content)}</div>`).join('');
+  box.scrollTop = box.scrollHeight;
+}
+function escapeHtml(s){
+  const d = document.createElement('div'); d.textContent = s; return d.innerHTML;
+}
+async function sendChatMessage(){
+  const input = document.getElementById('chat-input');
+  const text = input.value.trim();
+  if(!text) return;
+  input.value = '';
+  chatMessages.push({role:'user', content:text});
+  renderChatMessages();
+  const box = document.getElementById('chat-messages');
+  box.insertAdjacentHTML('beforeend', `<div class="msg ai" id="chat-loading">${loadingHtml('AI sedang mengetik')}</div>`);
+  box.scrollTop = box.scrollHeight;
+  try{
+    const apiMessages = chatMessages.map(m => ({role: m.role, content: m.content}));
+    const res = await fetch("https://api.anthropic.com/v1/messages", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        model: MODEL, max_tokens: 1000,
+        system: "Kamu adalah asisten belajar yang ramah untuk siswa Indonesia. Jawab dengan jelas, ringkas, dan mudah dipahami dalam Bahasa Indonesia.",
+        messages: apiMessages
+      })
+    });
+    const data = await res.json();
+    if(data.error) throw new Error(data.error.message);
+    const reply = data.content.map(b=>b.type==='text'?b.text:'').join('\n').trim();
+    chatMessages.push({role:'assistant', content: reply});
+    renderChatMessages();
+    if(chatMessages.length === 2){
+      saveHistory(text.slice(0,60), chatMessages.map(m=>`${m.role==='user'?'Kamu':'AI'}: ${m.content}`).join('\n\n'), 'Chat');
+    }
+  }catch(e){
+    document.getElementById('chat-loading')?.remove();
+    chatMessages.push({role:'assistant', content: 'Maaf, terjadi kesalahan: ' + e.message});
+    renderChatMessages();
+  }
+}
+
+// ================= PDF =================
+function renderPdfSection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Upload PDF</h2>
+    <p class="page-sub">AI membaca isi PDF-mu dan membuat ringkasannya.</p>
+    <div class="card">
+      <div class="drop" id="pdf-drop">📄 Klik atau seret file PDF ke sini</div>
+      <input type="file" id="pdf-file" accept="application/pdf" style="display:none">
+    </div>
+    <div id="pdf-result"></div>
+  `;
+  const drop = document.getElementById('pdf-drop');
+  const fileInput = document.getElementById('pdf-file');
+  drop.onclick = ()=> fileInput.click();
+  fileInput.onchange = ()=> handlePdfUpload(fileInput.files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; };
+  drop.ondrop = e => { e.preventDefault(); handlePdfUpload(e.dataTransfer.files[0]); };
+}
+async function handlePdfUpload(file){
+  if(!file) return;
+  const result = document.getElementById('pdf-result');
+  result.innerHTML = `<div class="card">${loadingHtml('Membaca PDF: ' + file.name)}</div>`;
+  try{
+    const base64 = await fileToBase64(file);
+    const text = await callClaude([
+      { type:"document", source:{ type:"base64", media_type:"application/pdf", data: base64 } },
+      { type:"text", text:"Ringkas isi dokumen ini dalam Bahasa Indonesia. Buat dalam bentuk poin-poin penting yang mudah dipahami, dan sertakan judul singkat di awal." }
+    ], { maxTokens: 1000 });
+    result.innerHTML = `<div class="card"><div class="result-block">${escapeHtml(text)}</div></div>`;
+    result.querySelector('.card').appendChild(exportControls(()=>text, file.name.replace(/\.pdf$/i,'') + '-ringkasan'));
+    saveHistory('PDF: ' + file.name, text, 'Ringkasan PDF');
+  }catch(e){
+    result.innerHTML = `<div class="card" style="color:var(--danger)">Gagal memproses PDF: ${e.message}</div>`;
+  }
+}
+
+// ================= IMAGE (soal) =================
+function renderImageSection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Upload Gambar Soal</h2>
+    <p class="page-sub">AI membaca soal dari gambar dan menjelaskan jawabannya.</p>
+    <div class="card">
+      <div class="drop" id="img-drop">🖼️ Klik atau seret gambar soal ke sini</div>
+      <input type="file" id="img-file" accept="image/*" style="display:none">
+    </div>
+    <div id="img-result"></div>
+  `;
+  const drop = document.getElementById('img-drop');
+  const fileInput = document.getElementById('img-file');
+  drop.onclick = ()=> fileInput.click();
+  fileInput.onchange = ()=> handleImageUpload(fileInput.files[0]);
+  drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = 'var(--accent)'; };
+  drop.ondrop = e => { e.preventDefault(); handleImageUpload(e.dataTransfer.files[0]); };
+}
+async function handleImageUpload(file){
+  if(!file) return;
+  const result = document.getElementById('img-result');
+  const previewUrl = URL.createObjectURL(file);
+  result.innerHTML = `<div class="card">
+      <img src="${previewUrl}" style="max-width:100%; border-radius:6px; margin-bottom:14px;">
+      ${loadingHtml('Membaca soal dari gambar')}
+    </div>`;
+  try{
+    const base64 = await fileToBase64(file);
+    const mediaType = file.type || 'image/jpeg';
+    const text = await callClaude([
+      { type:"image", source:{ type:"base64", media_type: mediaType, data: base64 } },
+      { type:"text", text:"Ini adalah gambar soal. Bacakan soalnya, lalu jelaskan langkah-langkah dan jawabannya dengan jelas dalam Bahasa Indonesia." }
+    ], { maxTokens: 1000 });
+    result.innerHTML = `<div class="card">
+        <img src="${previewUrl}" style="max-width:100%; border-radius:6px; margin-bottom:14px;">
+        <div class="result-block">${escapeHtml(text)}</div>
+      </div>`;
+    result.querySelector('.card').appendChild(exportControls(()=>text, 'jawaban-soal'));
+    saveHistory('Soal gambar: ' + file.name, text, 'Jawaban Soal');
+  }catch(e){
+    result.innerHTML = `<div class="card" style="color:var(--danger)">Gagal memproses gambar: ${e.message}</div>`;
+  }
+}
+
+// ================= SUMMARY =================
+function renderSummarySection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Ringkasan Materi</h2>
+    <p class="page-sub">Tempel teks materi, AI membuat poin-poin penting.</p>
+    <div class="card">
+      <textarea id="summary-input" rows="10" placeholder="Tempel materi di sini..."></textarea>
+      <div class="row" style="margin-top:12px;">
+        <button id="summary-btn">Buat Ringkasan</button>
+      </div>
+    </div>
+    <div id="summary-result"></div>
+  `;
+  document.getElementById('summary-btn').onclick = generateSummary;
+}
+async function generateSummary(){
+  const input = document.getElementById('summary-input').value.trim();
+  const result = document.getElementById('summary-result');
+  if(!input){ result.innerHTML = `<div class="card" style="color:var(--danger)">Tempel materi terlebih dahulu.</div>`; return; }
+  result.innerHTML = `<div class="card">${loadingHtml('Merangkum materi')}</div>`;
+  try{
+    const text = await callClaude(
+      `Ringkas materi berikut menjadi poin-poin penting (bullet points), dalam Bahasa Indonesia, mudah dipahami untuk belajar:\n\n${input}`,
+      { maxTokens: 1000 }
+    );
+    result.innerHTML = `<div class="card"><div class="result-block">${escapeHtml(text)}</div></div>`;
+    result.querySelector('.card').appendChild(exportControls(()=>text, 'ringkasan-materi'));
+    saveHistory('Ringkasan materi', text, 'Ringkasan Materi');
+  }catch(e){
+    result.innerHTML = `<div class="card" style="color:var(--danger)">Gagal membuat ringkasan: ${e.message}</div>`;
+  }
+}
+
+// ================= QUIZ GENERATOR =================
+function renderQuizSection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Generator Soal</h2>
+    <p class="page-sub">AI membuat kuis pilihan ganda dari materi.</p>
+    <div class="card">
+      <textarea id="quiz-input" rows="8" placeholder="Tempel materi di sini..."></textarea>
+      <div class="row" style="margin-top:12px;">
+        <label class="mono" style="font-size:13px;">Jumlah soal:</label>
+        <select id="quiz-count">
+          <option value="3">3</option>
+          <option value="5" selected>5</option>
+          <option value="8">8</option>
+        </select>
+        <button id="quiz-btn">Buat Kuis</button>
+      </div>
+    </div>
+    <div id="quiz-result"></div>
+  `;
+  document.getElementById('quiz-btn').onclick = generateQuiz;
+}
+async function generateQuiz(){
+  const input = document.getElementById('quiz-input').value.trim();
+  const count = document.getElementById('quiz-count').value;
+  const result = document.getElementById('quiz-result');
+  if(!input){ result.innerHTML = `<div class="card" style="color:var(--danger)">Tempel materi terlebih dahulu.</div>`; return; }
+  result.innerHTML = `<div class="card">${loadingHtml('Menyusun ' + count + ' soal kuis')}</div>`;
+  try{
+    const raw = await callClaude(
+      `Buat ${count} soal pilihan ganda dari materi berikut. Balas HANYA dengan JSON valid (tanpa markdown code fence, tanpa teks lain) berbentuk array objek dengan field: "question" (string), "options" (array 4 string), "answerIndex" (angka index jawaban benar 0-3), "explanation" (string singkat).\n\nMateri:\n${input}`,
+      { maxTokens: 1000 }
+    );
+    const cleaned = raw.replace(/```json|```/g, '').trim();
+    const quiz = JSON.parse(cleaned);
+    renderQuizCards(result, quiz);
+    saveHistory('Kuis (' + count + ' soal)', JSON.stringify(quiz, null, 2), 'Generator Soal');
+  }catch(e){
+    result.innerHTML = `<div class="card" style="color:var(--danger)">Gagal membuat kuis: ${e.message}</div>`;
+  }
+}
+function renderQuizCards(container, quiz){
+  container.innerHTML = '';
+  quiz.forEach((q, qi)=>{
+    const card = document.createElement('div');
+    card.className = 'card quiz-card';
+    card.innerHTML = `
+      <div class="quiz-q">${qi+1}. ${escapeHtml(q.question)}</div>
+      ${q.options.map((opt,oi)=>`<button class="quiz-opt" data-oi="${oi}">${escapeHtml(opt)}</button>`).join('')}
+      <div class="quiz-explain">${escapeHtml(q.explanation || '')}</div>
+    `;
+    card.querySelectorAll('.quiz-opt').forEach(btn=>{
+      btn.onclick = ()=>{
+        if(card.dataset.answered) return;
+        card.dataset.answered = '1';
+        const oi = parseInt(btn.dataset.oi);
+        card.querySelectorAll('.quiz-opt').forEach((b,i)=>{
+          if(i === q.answerIndex) b.classList.add('correct');
+          else if(i === oi) b.classList.add('wrong');
+        });
+        card.querySelector('.quiz-explain').style.display = 'block';
+      };
+    });
+    container.appendChild(card);
+  });
+  const txt = quiz.map((q,i)=>`${i+1}. ${q.question}\n${q.options.map((o,oi)=>`   ${String.fromCharCode(97+oi)}) ${o}`).join('\n')}\n   Jawaban: ${q.options[q.answerIndex]}\n   ${q.explanation||''}`).join('\n\n');
+  container.appendChild(exportControls(()=>txt, 'kuis-materi'));
+}
+
+// ================= HISTORY =================
+async function renderHistorySection(main){
+  main.innerHTML = `
+    <h2 class="page-title">Riwayat</h2>
+    <p class="page-sub">Disimpan otomatis lewat penyimpanan bawaan Claude (bukan Local Storage — Local Storage tidak didukung di sini, jadi kami pakai penyimpanan pribadimu yang tersimpan antar sesi).</p>
+    <div class="card" id="history-list">${loadingHtml('Memuat riwayat')}</div>
+  `;
+  const items = await listHistory();
+  const list = document.getElementById('history-list');
+  if(items.length === 0){
+    list.innerHTML = `<div class="empty">Belum ada riwayat. Mulai chat atau buat ringkasan!</div>`;
+    return;
+  }
+  list.innerHTML = '';
+  items.forEach(it=>{
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML = `<div><div class="t">[${it.kind}] ${escapeHtml(it.title)}</div><div class="d">${it.date}</div></div><span>›</span>`;
+    div.onclick = ()=> showHistoryDetail(it);
+    list.appendChild(div);
+  });
+}
+function showHistoryDetail(it){
+  const main = document.getElementById('main');
+  main.innerHTML = `
+    <button class="ghost" id="back-btn">‹ Kembali ke Riwayat</button>
+    <h2 class="page-title" style="margin-top:14px;">${escapeHtml(it.title)}</h2>
+    <p class="page-sub mono">${it.kind} • ${it.date}</p>
+    <div class="card"><div class="result-block">${escapeHtml(it.text)}</div></div>
+  `;
+  main.querySelector('.card').appendChild(exportControls(()=>it.text, it.title.replace(/[^a-z0-9]/gi,'_').slice(0,40)));
+  document.getElementById('back-btn').onclick = ()=> renderHistorySection(main);
+}
+
+render();
+</script>
+</body>
+</html>
